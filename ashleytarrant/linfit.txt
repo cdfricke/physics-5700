@@ -1,0 +1,60 @@
+def lin_fit(xdata, ydata, xerr=None, yerr=None):
+    """
+    A function to perform an unweighted or weighted linear fit to data.
+
+    Arguments:
+    * xdata: the x data to fit
+    * ydata: the y data to fit
+    * xerr (OPTIONAL): measurement error in x data
+    * yerr (OPTIONAL): measurement error in y data
+
+    Returns:
+    * If xerr and yerr are given, returns the weighted best fit parameters and covariance matrix, 
+           where both measurement errors were taken into account
+    * If just yerr is given, returns the weighted best fit parameters and covariance matrix,
+            where the only measurement error was the yerr given
+    * If no measurement errors are given, best fit parameters and covariance matrix of unweighted fit are returned.
+    """
+    
+    from scipy.optimize import curve_fit
+
+    # linear function to fit; finds slope and intercept
+    def f(x,m,b):
+        return m * x + b
+
+    # do the unweighted fit
+    popt, pcov = curve_fit(f, xdata, ydata)
+    
+    # check which variables have measurement errors and refit if necessary
+    #
+    if (xerr is not None) and (yerr is not None):
+    
+        # get the total weight
+        sigma_tot = np.sqrt(yerr**2. + (popt[0]*xerr)**2.)
+        
+        # refit
+        popt_weighted, pcov_weighted = curve_fit(f, xdata, ydata, sigma=sigma_tot)
+        w_param_err = np.sqrt(np.diag(pcov_weighted))    # calculate error on fit parameters
+        
+        print('The slope is', popt_weighted[0], '+\-', w_param_err[0], '\n')
+        print('The intercept is', popt_weighted[1], '+\-', w_param_err[1], '\n')
+        
+        return popt_weighted, w_param_err
+        
+    elif yerr is not None:
+    
+        # refit
+        popt_weighted, pcov_weighted = curve_fit(f, xdata, ydata, sigma=yerr)
+        w_param_err = np.sqrt(np.diag(pcov_weighted)) # calculate error on fit parameters
+        
+        print('The slope is', popt_weighted[0], '+\-', w_param_err[0], '\n')
+        print('The intercept is', popt_weighted[1], '+\-', w_param_err[1], '\n')
+        
+        return popt_weighted, w_param_err
+        
+    else:
+        param_err = np.sqrt(np.diag(pcov))  # calculate error on fit parameters
+        print('The slope is', popt[0], '+\-', param_err[0], '\n')
+        print('The intercept is', popt[1], '+\-', param_err[1], '\n')
+        
+        return popt, param_err
