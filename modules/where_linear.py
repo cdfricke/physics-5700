@@ -4,19 +4,11 @@
 # Desc: module for linear domain finder, designed to find a region within data which is best fit by linear regression
 
 import numpy as np
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 
-
-def linear(x: np.ndarray, fit: np.ndarray) -> np.ndarray:
-    """
-    Applies a simple y = mx + b transformation of a single value or array-like input.
-    Mainly useful for generating data to plot a line of best fit.
-    @@ params:
-    x: np.ndarray - array object containing data points along the horizontal axis.
-    fit: np.ndarray - array returned by np.polyfit(x, y, deg=1), i.e. coefficients of the polynomial fit.
-    """
-    return (x * fit[0]) + fit[1] 
-
+def line(x, m, b):
+    return m * x + b
 
 class Domain:
     """
@@ -33,15 +25,15 @@ class Domain:
     slope: float - the slope of the fit generated using all data points in the domain
     """
     def __init__(self):
-        self.id = 0
-        self.shift = 0
-        self.size = 0
-        self.slope = 0.0
+        self.id: int = 0
+        self.shift: int = 0
+        self.size: int = 0
+        self.slope: float = 0.0
     def __init__(self, id: int, shift: int, size: int, slope: float):
-        self.id = id
-        self.shift = shift
-        self.size = size
-        self.slope = slope
+        self.id: int = id
+        self.shift: int = shift
+        self.size: int = size
+        self.slope: float = slope
     def __lt__(self, other) -> bool:
         return (self.slope < other.slope) if (self.size == other.size) else (self.size < other.size)
     def __gt__(self, other) -> bool:
@@ -54,14 +46,17 @@ class LinearDomainFinder:
 
     @@ data members:
     LLD: Domain() - the largest linear domain discovered by the searching algorithm. Stored as a Domain class object.
-    slope: float - the slope of the discovered linear domain.
+    popt: np.ndarray - the optimized params as returned by the weighted or unweighted fit of scipy.optimize.curve_fit
+    perr: np.ndarray - the error on optimized params as the sqrt of the diagonalization of the covariance matrix returned by curve_fit
     """
     def __init__(self):
-        self.LLD = Domain
-        self.slope = 0.0  
+        self.LLD: Domain = Domain
+        self.popt: np.ndarray = 0.0
+        self.perr: np.ndarray = None
         self._xdata = None          
         self._xlabel = ""           
-        self._ydata = None          
+        self._ydata = None  
+        self._yerr = None        
         self._yabel = ""            
         self._verbosity = 1
 
@@ -80,6 +75,13 @@ class LinearDomainFinder:
         """
         self._ydata = np.array(data)
         self._ylabel = label
+
+    def setYerr(self, data: list) -> None:
+        """
+        Sets the yerr array (vertical axis) for curve_fit to perform a weighted fit.
+        Otherwise, yerr=None.
+        """
+        self._yerr = np.array(data)
 
     def setVerbosity(self, verbose=1) -> None:
         """
@@ -107,7 +109,7 @@ class LinearDomainFinder:
         @@ returns:
             No return values. Results are stored in data members of the class
             self.LLD: Domain() - domain object storing information about the discovered largest linear domain
-            self.slope: float - slope of the final fit across all points within the LLD
+            self.popt: np.ndarray - final parameters of the linear fit
         """
         N = len(self._xdata) - WIN_SIZE + 1     # maximum allowed shift (exclusive) so that the window does not exceed data bounds  
         slopes = np.zeros(N, dtype=float)
@@ -118,14 +120,17 @@ class LinearDomainFinder:
             WIN_END = WIN_START + WIN_SIZE
 
             # perform linear regression on windowed data ("windowed" meaning using list slicing)
-            fit = np.polyfit(x=self._xdata[WIN_START:WIN_END], y=self._ydata[WIN_START:WIN_END], deg=1)
-            slopes[i] = fit[0]
+            popt = np.polyfit(x=self._xdata[WIN_START:WIN_END], y=self._ydata[WIN_START:WIN_END], deg=1)
+            slopes[i] = popt[0]
 
             if self._verbosity > 1:
-                fit_ydata = linear(self._xdata[WIN_START:WIN_END], fit)
-                print("Slope:", fit[0])
+                fit_ydata = line(self._xdata[WIN_START:WIN_END], popt[0], popt[1])
+                print("Slope:", popt[0])
                 plt.title(f"{self._ylabel} vs. {self._xlabel}: Windowing Iteration {i}"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
-                plt.plot(self._xdata, self._ydata, 'b+')
+                if self._yerr is not None:
+                    plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize = 2)
+                else:
+                    plt.plot(self._xdata, self._ydata)
                 plt.plot(self._xdata[WIN_START:WIN_END], fit_ydata, 'r-')
                 plt.show()
 
@@ -164,16 +169,26 @@ class LinearDomainFinder:
                 LLD = domains[i]
         self.LLD = LLD
         
-        # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE
+        # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
         LLD_START = LLD.shift
         LLD_END = LLD.shift + LLD.size + WIN_SIZE
-        finalFit = np.polyfit(x=self._xdata[LLD_START:LLD_END], y=self._ydata[LLD_START:LLD_END], deg=1)
-        self.slope = finalFit[0]
+        popt = None
+        pcov = None
+        print(self._yerr)
+        if self._yerr is not None:
+            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
+        else:
+            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
+        self.popt = popt
+        self.perr = np.sqrt(np.diag(pcov))
 
         if self._verbosity > 0:
-            finalFit_ydata = linear(self._xdata[LLD_START:LLD_END], finalFit)
-            plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.slope})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
-            plt.plot(self._xdata, self._ydata, 'b+')
+            finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
+            plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
+            if self._yerr is not None:
+                plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize=2)
+            else:
+                plt.plot(self._xdata, self._ydata)
             plt.plot(self._xdata[LLD_START:LLD_END], finalFit_ydata, 'r-')
             plt.show()
             if self._verbosity > 1:
