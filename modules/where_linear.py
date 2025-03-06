@@ -53,6 +53,7 @@ class LinearDomainFinder:
         self.LLD: Domain = Domain
         self.popt: np.ndarray = 0.0
         self.perr: np.ndarray = None
+        self._domains = None
         self._xdata = None          
         self._xlabel = ""           
         self._ydata = None  
@@ -139,7 +140,7 @@ class LinearDomainFinder:
         currDomainID = 0
         domainIDs = np.zeros(N, dtype=int)  # mostly used for debugging, but also useful for plotting points with color = domainID
         domainIDs[0] = currDomainID
-        domains = []
+        self._domains = []
         currDomain = Domain(id=currDomainID, shift=0, size=1, slope=currSlope)
 
         for i in range(1, N):
@@ -148,13 +149,13 @@ class LinearDomainFinder:
             if slope_FDEV < FDEV_CUT:
                 currDomain.size += 1
             else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
-                domains.append(currDomain)
+                self._domains.append(currDomain)
                 currSlope = slopes[i] 
                 currDomainID += 1          
                 currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
             domainIDs[i] = currDomainID
             
-        domains.append(currDomain)
+        self._domains.append(currDomain)
         
         if self._verbosity > 0:
             # plot slope against window shift. Linear domains will look like a flat line
@@ -163,10 +164,10 @@ class LinearDomainFinder:
             plt.show()
         
         # FIND THE LARGEST LINEAR DOMAIN (LLD)
-        LLD = domains[0]
-        for i in range(len(domains)):
-            if LLD < domains[i]:
-                LLD = domains[i]
+        LLD = self._domains[0]
+        for i in range(len(self._domains)):
+            if LLD < self._domains[i]:
+                LLD = self._domains[i]
         self.LLD = LLD
         
         # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
