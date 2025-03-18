@@ -1,6 +1,6 @@
-# Programmer: Connor Fricke (cd.fricke23@gmail.com)
+# Programmers: Connor Fricke (cd.fricke23@gmail.com) Jayde Spiegel (jdspiegel1221@gmail.com)
 # File: where_linear.py
-# Latest Rev: 17-Dec-2024
+# Latest Rev: 18-Mar-2025
 # Desc: module for linear domain finder, designed to find a region within data which is best fit by linear regression
 
 import numpy as np
@@ -61,6 +61,7 @@ class LinearDomainFinder:
         self._yabel = ""            
         self._verbosity = 1
         self._method = 0
+        self._slopes = []
 
     def setMethod(self, method: int):
         """
@@ -203,6 +204,7 @@ class LinearDomainFinder:
                 popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
             self.popt = popt
             self.perr = np.sqrt(np.diag(pcov))
+            self._slopes.append(popt[0])
 
             if self._verbosity > 0:
                 finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])

@@ -1,6 +1,6 @@
-# Programmer: Connor Fricke (cd.fricke23@gmail.com)
+# Programmers: Connor Fricke (cd.fricke23@gmail.com) Jayde Spiegel (jdspiegel1221@gmail.com)
 # File: where_linear.py
-# Latest Rev: 17-Dec-2024
+# Latest Rev: 18-Mar-2025
 # Desc: module for linear domain finder, designed to find a region within data which is best fit by linear regression
 
 import numpy as np
@@ -60,6 +60,16 @@ class LinearDomainFinder:
         self._yerr = None        
         self._yabel = ""            
         self._verbosity = 1
+        self._method = 0
+        self._slopes = []
+
+    def setMethod(self, method: int):
+        """
+        Sets the preferred method for choosing a new domain. Either using FDEV_CUT parameter (0) or
+        by direction change (1). FDEV_CUT specifies an error on the domain slope. Direction change only specifies
+        a new domain when the slope changes sign.
+        """
+        self._method = method
 
     def setX(self, data: list, label="x") -> None:
         """
@@ -145,15 +155,25 @@ class LinearDomainFinder:
 
         for i in range(1, N):
             # fractional deviation between the current domain's slope and the next slope in the list
-            slope_FDEV = abs(slopes[i] - currSlope) / currSlope  
-            if slope_FDEV < FDEV_CUT:
-                currDomain.size += 1
-            else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
-                self._domains.append(currDomain)
-                currSlope = slopes[i] 
-                currDomainID += 1          
-                currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
-            domainIDs[i] = currDomainID
+            if self._method == 0:
+                slope_FDEV = abs(abs(slopes[i] - currSlope) / currSlope)
+                if slope_FDEV < FDEV_CUT:
+                    currDomain.size += 1
+                else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
+                    self._domains.append(currDomain)
+                    currSlope = slopes[i] 
+                    currDomainID += 1          
+                    currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
+                domainIDs[i] = currDomainID
+            elif self._method == 1:
+                if currSlope * slopes[i] > 0.0:
+                    currDomain.size += 1
+                else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
+                    self._domains.append(currDomain)
+                    currSlope = slopes[i] 
+                    currDomainID += 1          
+                    currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
+                domainIDs[i] = currDomainID
             
         self._domains.append(currDomain)
         
@@ -171,29 +191,32 @@ class LinearDomainFinder:
         self.LLD = LLD
         
         # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
-        LLD_START = LLD.shift
-        LLD_END = LLD.shift + LLD.size + WIN_SIZE
-        popt = None
-        pcov = None
-        print(self._yerr)
-        if self._yerr is not None:
-            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
-        else:
-            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
-        self.popt = popt
-        self.perr = np.sqrt(np.diag(pcov))
+        for LLD in self._domains:
 
-        if self._verbosity > 0:
-            finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
-            plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
+            LLD_START = LLD.shift
+            LLD_END = LLD.shift + LLD.size + WIN_SIZE
+            popt = None
+            pcov = None
+            print(self._yerr)
             if self._yerr is not None:
-                plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize=2)
+                popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
             else:
-                plt.plot(self._xdata, self._ydata)
-            plt.plot(self._xdata[LLD_START:LLD_END], finalFit_ydata, 'r-')
-            plt.show()
-            if self._verbosity > 1:
-                print("Domain IDs:", domainIDs)
+                popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
+            self.popt = popt
+            self.perr = np.sqrt(np.diag(pcov))
+            self._slopes.append(popt[0])
+
+            if self._verbosity > 0:
+                finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
+                plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
+                if self._yerr is not None:
+                    plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize=2)
+                else:
+                    plt.plot(self._xdata, self._ydata)
+                plt.plot(self._xdata[LLD_START:LLD_END], finalFit_ydata, 'r-')
+                plt.show()
+                if self._verbosity > 1:
+                    print("Domain IDs:", domainIDs)
 
 
             
