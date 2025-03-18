@@ -60,6 +60,15 @@ class LinearDomainFinder:
         self._yerr = None        
         self._yabel = ""            
         self._verbosity = 1
+        self._method = 0
+
+    def setMethod(self, method: int):
+        """
+        Sets the preferred method for choosing a new domain. Either using FDEV_CUT parameter (0) or
+        by direction change (1). FDEV_CUT specifies an error on the domain slope. Direction change only specifies
+        a new domain when the slope changes sign.
+        """
+        self._method = method
 
     def setX(self, data: list, label="x") -> None:
         """
@@ -145,15 +154,25 @@ class LinearDomainFinder:
 
         for i in range(1, N):
             # fractional deviation between the current domain's slope and the next slope in the list
-            slope_FDEV = abs(slopes[i] - currSlope) / currSlope  
-            if slope_FDEV < FDEV_CUT:
-                currDomain.size += 1
-            else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
-                self._domains.append(currDomain)
-                currSlope = slopes[i] 
-                currDomainID += 1          
-                currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
-            domainIDs[i] = currDomainID
+            if self._method == 0:
+                slope_FDEV = abs(abs(slopes[i] - currSlope) / currSlope)
+                if slope_FDEV < FDEV_CUT:
+                    currDomain.size += 1
+                else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
+                    self._domains.append(currDomain)
+                    currSlope = slopes[i] 
+                    currDomainID += 1          
+                    currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
+                domainIDs[i] = currDomainID
+            elif self._method == 1:
+                if currSlope * slopes[i] > 0.0:
+                    currDomain.size += 1
+                else:   # store prev domain, update slope, update domain ID and create new domain with updated vals
+                    self._domains.append(currDomain)
+                    currSlope = slopes[i] 
+                    currDomainID += 1          
+                    currDomain = Domain(id=currDomainID, shift=i, size=1, slope=currSlope)
+                domainIDs[i] = currDomainID
             
         self._domains.append(currDomain)
         
