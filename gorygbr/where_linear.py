@@ -190,29 +190,31 @@ class LinearDomainFinder:
         self.LLD = LLD
         
         # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
-        LLD_START = LLD.shift
-        LLD_END = LLD.shift + LLD.size + WIN_SIZE
-        popt = None
-        pcov = None
-        print(self._yerr)
-        if self._yerr is not None:
-            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
-        else:
-            popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
-        self.popt = popt
-        self.perr = np.sqrt(np.diag(pcov))
+        for LLD in self._domains:
 
-        if self._verbosity > 0:
-            finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
-            plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
+            LLD_START = LLD.shift
+            LLD_END = LLD.shift + LLD.size + WIN_SIZE
+            popt = None
+            pcov = None
+            print(self._yerr)
             if self._yerr is not None:
-                plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize=2)
+                popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
             else:
-                plt.plot(self._xdata, self._ydata)
-            plt.plot(self._xdata[LLD_START:LLD_END], finalFit_ydata, 'r-')
-            plt.show()
-            if self._verbosity > 1:
-                print("Domain IDs:", domainIDs)
+                popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END])
+            self.popt = popt
+            self.perr = np.sqrt(np.diag(pcov))
+
+            if self._verbosity > 0:
+                finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
+                plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
+                if self._yerr is not None:
+                    plt.errorbar(self._xdata, self._ydata, yerr=self._yerr, fmt='+', capsize=2)
+                else:
+                    plt.plot(self._xdata, self._ydata)
+                plt.plot(self._xdata[LLD_START:LLD_END], finalFit_ydata, 'r-')
+                plt.show()
+                if self._verbosity > 1:
+                    print("Domain IDs:", domainIDs)
 
 
             
