@@ -9,6 +9,7 @@ import pandas as pd
 import sys
 sys.path.append("../modules/")
 from where_linear import LinearDomainFinder
+import matplotlib.pyplot as plt
 
 
 
@@ -62,10 +63,10 @@ class analysis:
             print(LDF._slopes)
             print(LDF._slope_errors)
             domainSelection = []
-            userInput = int(input("Enter Domains to be used. Enter -1 to stop"))
+            userInput = int(input("Enter domain index to select for calculation. Enter -1 to stop."))
             while (userInput != -1):
-                 domainSelection.append(userInput)
-                 userInput = int(input("Enter Domains to be used. Enter -1 to stop"))
+                domainSelection.append(userInput)
+                userInput = int(input("Enter domain index to select for calculation. Enter -1 to stop."))
 
         #domainSelection = range(1,len(LDF._slopes)-1)
         vg_data = []
@@ -115,6 +116,7 @@ class analysis:
         data["q"] = self.Q
         data["electrons"] = self.q
         data["a"] = self.A
+        data["a_err"] = self.A_err
         data["VG"] = self.VG
         data["VE"] = self.VE
         data["VE_err"] = self.VE_err
@@ -122,4 +124,23 @@ class analysis:
         data["Particle"] = self.files
     
         data.to_csv(name)
+    
+    def load(self, file:str):
+        df = pd.read_csv(file)
+        self.Q = df["q"].to_list() 
+        self.q = df["electrons"].to_list()
+        self.A = df["a"].to_list()
+        self.VG = df["VG"].to_list()
+        self.VE = df["VE"].to_list()
+        self.VE_err = df["VE_err"].to_list()
+        self.VG_err = df["VG_err"].to_list()
+        self.files = df["Particle"].to_list()
+        self.A_err = df["A_err"].to_list()
+    
+    def plateu(self, csv:str):
+        fig,ax = plt.subplots()
+
+        ax.scatter()
+        
+        
         
