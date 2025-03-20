@@ -62,6 +62,7 @@ class LinearDomainFinder:
         self._verbosity = 1
         self._method = 0
         self._slopes = []
+        self._slope_errors = []
 
     def setMethod(self, method: int):
         """
@@ -205,6 +206,7 @@ class LinearDomainFinder:
             self.popt = popt
             self.perr = np.sqrt(np.diag(pcov))
             self._slopes.append(popt[0])
+            self._slope_errors.append(self.perr[1])
 
             if self._verbosity > 0:
                 finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
