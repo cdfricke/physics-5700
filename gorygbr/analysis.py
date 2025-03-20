@@ -34,6 +34,34 @@ def a_err(vg):
     rho = 0.86e3 #kg/m^3
     return 1/2 * np.sqrt((9*eta)/(2*g*rho*vg))
 
+def aesthetic(ax):
+
+    for axis in ['top', 'bottom', 'left', 'right']:
+
+        ax.spines[axis].set_linewidth(1.5)
+
+    for tick in ax.get_xticklabels():
+
+        tick.set_fontname('Times New Roman')
+
+    for tick in ax.get_yticklabels():
+
+        tick.set_fontname('Times New Roman')
+
+    ax.margins(x=0.2, y=0.2, tight=True)
+
+    ax.yaxis.set_ticks_position('both')
+
+    ax.xaxis.set_ticks_position('both')
+
+    ax.tick_params(direction='in', axis='both', which='minor', length=3, width=1, labelsize=2)
+
+    ax.tick_params(direction='in', axis='both', which='major', length=5, width=1, labelsize=10)
+
+    ax.minorticks_on()
+
+    ax.title.set_fontfamily('Times New Roman')
+
 class analysis:
 
     def __init__(self):
@@ -46,6 +74,7 @@ class analysis:
         self.VE_err = []
         self.VG_err = []
         self.q = []
+        self.dataframe = pd.DataFrame()
 
     def Analyze(self,PATH:str,win_size,cut,verb=1):
         """
@@ -122,7 +151,7 @@ class analysis:
         data["VE_err"] = self.VE_err
         data["VG_err"] = self.VG_err
         data["Particle"] = self.files
-    
+        self.dataframe = data
         data.to_csv(name)
     
     def load(self, file:str):
@@ -136,11 +165,14 @@ class analysis:
         self.VG_err = df["VG_err"].to_list()
         self.files = df["Particle"].to_list()
         self.A_err = df["A_err"].to_list()
+        self.dataframe = df
     
-    def plateu(self, csv:str):
+    def plateu(self):
         fig,ax = plt.subplots()
-
-        ax.scatter()
+        aesthetic(ax)
+        df = self.dataframe
+        df.sort_values("q")
+        ax.scatter(range(len(self.dataframe)), df.q)
         
         
         
