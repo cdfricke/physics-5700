@@ -210,6 +210,8 @@ class LinearDomainFinder:
         # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
         iter = 0
         for LLD in self._domains:
+            print("Iteration:", iter)
+            iter += 1
 
             LLD_START = LLD.shift
             LLD_END = LLD.shift + LLD.size + WIN_SIZE
@@ -225,8 +227,6 @@ class LinearDomainFinder:
             self._slope_errors.append(self.perr[1])
 
             if self._verbosity > 0:
-                print("Iteration:", iter)
-                iter += 1
                 finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
                 plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
                 if self._yerr is not None:
