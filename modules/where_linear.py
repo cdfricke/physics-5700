@@ -64,6 +64,22 @@ class LinearDomainFinder:
         self._slopes = []
         self._slope_errors = []
 
+    def clear(self):
+        """
+        Re-initializes all internal variables. Does not change method or verbosity.
+        """
+        self.LLD: Domain = Domain
+        self.popt: np.ndarray = 0.0
+        self.perr: np.ndarray = None
+        self._domains = None
+        self._xdata = None          
+        self._xlabel = ""           
+        self._ydata = None  
+        self._yerr = None        
+        self._yabel = ""            
+        self._slopes = []
+        self._slope_errors = []
+
     def setMethod(self, method: int):
         """
         Sets the preferred method for choosing a new domain. Either using FDEV_CUT parameter (0) or
@@ -192,6 +208,7 @@ class LinearDomainFinder:
         self.LLD = LLD
         
         # USE ALL POINTS BELONGING TO LLD TO FIND ACCURATE SLOPE (use scipy.optimize.curve_fit now instead of np.polyfit)
+        iter = 0
         for LLD in self._domains:
 
             LLD_START = LLD.shift
@@ -208,6 +225,8 @@ class LinearDomainFinder:
             self._slope_errors.append(self.perr[1])
 
             if self._verbosity > 0:
+                print("Iteration:", iter)
+                iter += 1
                 finalFit_ydata = line(self._xdata[LLD_START:LLD_END], popt[0], popt[1])
                 plt.title(f"{self._ylabel} vs. {self._xlabel}: Final Fit (Slope = {self.popt[0]})"); plt.xlabel(self._xlabel); plt.ylabel(self._ylabel)
                 if self._yerr is not None:
