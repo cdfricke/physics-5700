@@ -198,7 +198,6 @@ class LinearDomainFinder:
             LLD_END = LLD.shift + LLD.size + WIN_SIZE
             popt = None
             pcov = None
-            print(self._yerr)
             if self._yerr is not None:
                 popt, pcov = curve_fit(line, xdata=self._xdata[LLD_START:LLD_END], ydata=self._ydata[LLD_START:LLD_END], sigma=self._yerr[LLD_START:LLD_END])
             else:
