@@ -10,12 +10,16 @@ from where_linear import LinearDomainFinder
 class analysis:
 
     def __init__(self):
-        self.directory = ""
+        self.path = ""
+        self.Q = []
+        self.A = []
 
-    def setDirectory(self, dire: str):
+    def setDirectory(self, directory: str):
         """
         """
         self.directory = dire
     
     def Analyze(self):
-        
+        """
+        """
+        glob.glob(directory)
