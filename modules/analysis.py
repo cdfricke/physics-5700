@@ -83,9 +83,9 @@ class analysis:
                 ve_err.append(err)
 
         V_g = np.mean(vg_data)
-        V_g_err = add_in_quad(vg_err)
+        V_g_err = np.mean(vg_err)
         V_E = np.mean(ve_data)
-        V_E_err = add_in_quad(ve_err)
+        V_E_err = np.mean(ve_err)
         if verb > 0:
             print("V_g =", V_g, "+-", V_g_err, "(mm/s)")
             print("V_E =", V_E, "+-", V_E_err, "(mm/s)")
